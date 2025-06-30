@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MiniLang Compiler</title>
+  <style>
+    body {
+      --bg-color: #121212;
+      --text-color: #ffffff;
+      --box-color: #1e1e1e;
+      --btn-color: #3b82f6;
+      --btn-hover: #2563eb;
+      --input-bg: #2d2d2d;
+      --output-bg: #2b2b2b;
+
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    body.light-mode {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --box-color: #f3f4f6;
+      --btn-color: #3b82f6;
+      --btn-hover: #2563eb;
+      --input-bg: #ffffff;
+      --output-bg: #f3f4f6;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: #000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      transition: background-color 0.3s ease;
+    }
+
+    body.light-mode header {
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--text-color);
+      transition: color 0.3s ease;
+    }
+
+    .toggle-mode {
+      cursor: pointer;
+      background: var(--btn-color);
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 5px;
+    }
+
+    /* Switch style */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--btn-color);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      transition: background-color 0.3s ease;
+    }
+
+    .editor, .output {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      background-color: var(--box-color);
+      transition: background-color 0.3s ease;
+    }
+
+    textarea {
+      width: 100%;
+      height: 60vh;
+      background: var(--input-bg);
+      color: var(--text-color);
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      padding: 1rem;
+      resize: vertical;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .buttons {
+      margin-top: 1rem;
+    }
+
+    .buttons button {
+      background-color: var(--btn-color);
+      border: none;
+      color: white;
+      padding: 0.6rem 1.2rem;
+      margin-right: 0.5rem;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .buttons button:hover {
+      background-color: var(--btn-hover);
+    }
+
+    .output {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .output-box {
+      background: var(--output-bg);
+      color: var(--text-color);
+      padding: 1rem;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      height: 50%;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .output-select {
+      background-color: var(--btn-color);
+      color: white;
+      border: none;
+      padding: 0.5rem;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      main {
+        flex-direction: column;
+      }
+
+      .editor, .output {
+        height: 50vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MiniLang Compiler</h1>
+    <div class="header-controls">
+      <select id="outputSelector" class="output-select" required>
+        <option value="" disabled selected hidden>select</option>
+        <option value="lexer">Lexer</option>
+        <option value="parser">Parser</option>
+        <option value="codegen">Codegen</option>
+        <option value="finalOutput">Output</option>
+      </select>
+      <label class="switch">
+        <input type="checkbox" id="modeSwitch" onchange="toggleDarkMode()">
+        <span class="slider round"></span>
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <div class="editor">
+      <textarea id="sourceCode" placeholder="Write your MiniLang code here..."></textarea>
+      <div class="buttons">
+        <button id="compileBtn" onclick="compileCode()">Compile</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <div class="output">
+      <div>
+        <h4>Lexer:</h4>
+        <textarea class="output-box" id="lexerOutput" placeholder="Lexer Output" readonly></textarea>
+      </div>
+      <div>
+        <h4>Parser:</h4>
+        <textarea class="output-box" id="parserOutput" placeholder="Parser Output" readonly></textarea>
+      </div>
+      <div>
+        <h4>CodeGen:</h4>
+        <textarea class="output-box" id="codegenOutput" placeholder="Code Generation Output" readonly></textarea>
+      </div>
+      <div>
+        <h4>Output:</h4>
+        <textarea class="output-box" id="finalOutput" placeholder="Output" readonly></textarea>
+      </div>
+    </div>
+  </main>
+
+<script>
+    function toggleDarkMode() {
+        document.body.classList.toggle("light-mode");
+    }
+
+    document.getElementById("clearBtn").addEventListener("click", clearCode);
+
+    function clearCode() {
+        document.getElementById("sourceCode").value = "";
+        document.getElementById("lexerOutput").value = "";
+        document.getElementById("parserOutput").value = "";
+        document.getElementById("codegenOutput").value = "";
+        document.getElementById("finalOutput").value = "";
+        // Clear cached data when code is cleared
+        lastCompiledCode = "";
+        lastLexerOutput = "";
+        lastParserOutput = "";
+        lastCodegenOutput = "";
+        lastFinalOutput = "";
+        hideAlreadyCompiledMessage(); // Hide the message if it was visible
+    }
+
+    // New global variables to store cached data
+    let lastCompiledCode = "";
+    let lastLexerOutput = "";
+    let lastParserOutput = "";
+    let lastCodegenOutput = "";
+    let lastFinalOutput = "";
+
+    // Function to show/hide "Already compiled" message
+    function showAlreadyCompiledMessage() {
+        let messageElement = document.getElementById("alreadyCompiledMessage");
+        if (!messageElement) {
+            // Create the message element if it doesn't exist
+            messageElement = document.createElement("div");
+            messageElement.id = "alreadyCompiledMessage";
+            messageElement.style.color = "orange"; // Or any color you prefer
+            messageElement.style.marginTop = "10px";
+            messageElement.style.textAlign = "center";
+            document.querySelector(".buttons").appendChild(messageElement);
+        }
+        messageElement.textContent = "Already compiled (showing cached output).";
+        messageElement.style.display = "block";
+    }
+
+    function hideAlreadyCompiledMessage() {
+        let messageElement = document.getElementById("alreadyCompiledMessage");
+        if (messageElement) {
+            messageElement.style.display = "none";
+            messageElement.textContent = ""; // Clear text
+        }
+    }
+
+
+    function compileCode() {
+        const code = document.getElementById("sourceCode").value;
+        const selectedOutput = document.getElementById("outputSelector").value;
+
+        // Reset outputs and hide message initially
+        document.getElementById("lexerOutput").value = "";
+        document.getElementById("parserOutput").value = "";
+        document.getElementById("codegenOutput").value = "";
+        document.getElementById("finalOutput").value = "";
+        hideAlreadyCompiledMessage();
+
+
+        // Check if the current code is the same as the last compiled code
+        if (code === lastCompiledCode && lastCompiledCode !== "") {
+            showAlreadyCompiledMessage();
+            // Display cached outputs based on selected output type
+            if (selectedOutput === "lexer") {
+                document.getElementById("lexerOutput").value = lastLexerOutput || "No Lexer Output";
+            } else if (selectedOutput === "parser") {
+                document.getElementById("lexerOutput").value = lastLexerOutput || "No Lexer Output";
+                document.getElementById("parserOutput").value = lastParserOutput || "No Parser Output";
+            } else if (selectedOutput === "codegen") {
+                document.getElementById("lexerOutput").value = lastLexerOutput || "No Lexer Output";
+                document.getElementById("parserOutput").value = lastParserOutput || "No Parser Output";
+                document.getElementById("codegenOutput").value = lastCodegenOutput || "No Codegen Output";
+            } else if (selectedOutput === "finalOutput") {
+                document.getElementById("lexerOutput").value = lastLexerOutput || "No Lexer Output";
+                document.getElementById("parserOutput").value = lastParserOutput || "No Parser Output";
+                document.getElementById("codegenOutput").value = lastCodegenOutput || "No Codegen Output";
+                document.getElementById("finalOutput").value = lastFinalOutput || "No Final Output";
+            }
+            return; // Exit the function, no need to call the backend
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('code', code);
+
+        fetch("/compile", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: formData.toString()
+            })
+            .then(async (res) => {
+                const text = await res.text();
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    alert("Server did not return valid JSON");
+                    return;
+                }
+
+                if (data.error) {
+                    alert("Error: " + data.error);
+                    // Clear cached data on error
+                    lastCompiledCode = "";
+                    lastLexerOutput = "";
+                    lastParserOutput = "";
+                    lastCodegenOutput = "";
+                    lastFinalOutput = "";
+                    return;
+                }
+
+                // Update cache with new results
+                lastCompiledCode = code;
+                lastLexerOutput = data.lexer_output || data.lexer || "No Lexer Output";
+                lastParserOutput = data.parser_output || data.parser || "No Parser Output";
+                lastCodegenOutput = data.codegen_output || data.codegen || "No Codegen Output";
+                lastFinalOutput = data.final_output || "No Final Output";
+
+                // Display outputs based on selected output type
+                document.getElementById("lexerOutput").value = "";
+                document.getElementById("parserOutput").value = "";
+                document.getElementById("codegenOutput").value = "";
+                document.getElementById("finalOutput").value = "";
+
+
+                if (selectedOutput === "lexer") {
+                    document.getElementById("lexerOutput").value = lastLexerOutput;
+                } else if (selectedOutput === "parser") {
+                    document.getElementById("lexerOutput").value = lastLexerOutput;
+                    document.getElementById("parserOutput").value = lastParserOutput;
+                } else if (selectedOutput === "codegen") {
+                    document.getElementById("lexerOutput").value = lastLexerOutput;
+                    document.getElementById("parserOutput").value = lastParserOutput;
+                    document.getElementById("codegenOutput").value = lastCodegenOutput;
+                } else if (selectedOutput === "finalOutput") {
+                    document.getElementById("lexerOutput").value = lastLexerOutput;
+                    document.getElementById("parserOutput").value = lastParserOutput;
+                    document.getElementById("codegenOutput").value = lastCodegenOutput;
+                    document.getElementById("finalOutput").value = lastFinalOutput;
+                }
+            })
+            .catch(err => {
+                alert("Fetch error: " + err.message);
+                // Clear cached data on fetch error as well
+                lastCompiledCode = "";
+                lastLexerOutput = "";
+                lastParserOutput = "";
+                lastCodegenOutput = "";
+                lastFinalOutput = "";
+            });
+    }
+</script>
+</body>
+</html>
